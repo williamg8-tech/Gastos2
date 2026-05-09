@@ -3,13 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#131722">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    
     <title>Controle Financeiro Pro</title>
     
     <style>
@@ -64,18 +57,11 @@
 
         #theme-toggle {
             position: fixed;
-            bottom: 20px; right: 20px;
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            background: var(--accent);
-            color: white; border: none;
-            cursor: pointer; z-index: 9999;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
+            bottom: 20px; right: 20px; width: 50px; height: 50px; border-radius: 50%;
+            background: var(--accent); color: white; border: none; cursor: pointer; z-index: 9999;
+            display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.2s;
         }
-        #theme-toggle:active { transform: scale(0.9); }
     </style>
 </head>
 
@@ -88,13 +74,23 @@
     </div>
 
     <div class="header-stats">
-        <div class="box b10"><small>DIA 10</small><strong id="total10">R$ 0,00</strong></div>
-        <div class="box b20"><small>DIA 20</small><strong id="total20">R$ 0,00</strong></div>
+        <div class="box b10">
+            <small>SALDO DIA 10</small>
+            <input type="number" id="salario10" placeholder="R$ Recebido" onchange="salvarEAtualizar()" 
+                   style="width: 80%; margin: 5px 0; padding: 4px; font-size: 0.8rem; text-align: center; border-radius: 5px; border: none; outline: none;">
+            <strong id="total10" style="display: block;">R$ 0,00</strong>
+        </div>
+        <div class="box b20">
+            <small>SALDO DIA 20</small>
+            <input type="number" id="salario20" placeholder="R$ Recebido" onchange="salvarEAtualizar()" 
+                   style="width: 80%; margin: 5px 0; padding: 4px; font-size: 0.8rem; text-align: center; border-radius: 5px; border: none; outline: none;">
+            <strong id="total20" style="display: block;">R$ 0,00</strong>
+        </div>
     </div>
 
     <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center">
-            <label style="font-size: 0.7rem; font-weight: bold;">LIMITE MENSAL:</label>
+            <label style="font-size: 0.7rem; font-weight: bold;">LIMITE GERAL:</label>
             <input type="number" id="limite" value="2000" onchange="salvarEAtualizar()" style="width:90px; margin:0; padding:5px;">
         </div>
         <div class="progress-bg">
@@ -140,8 +136,11 @@
 
     <div class="card">
         <h2 id="titulo-notas">📝 NOTAS</h2>
-        <textarea id="notas" style="min-height: 80px" oninput="salvarNotas()" placeholder="Notas importantes para este mês..."></textarea>
-        <button style="background: var(--border); font-size: 0.8rem; height: 40px; padding:0; color: var(--text-main)" onclick="exportarDados()">💾 BACKUP JSON</button>
+        <textarea id="notas" style="min-height: 80px" oninput="salvarNotas()" placeholder="Notas importantes..."></textarea>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button style="background: var(--border); font-size: 0.7rem; height: 40px; padding:0; color: var(--text-main); flex: 1;" onclick="exportarDados()">💾 BACKUP JSON</button>
+            <button style="background: #28a745; font-size: 0.7rem; height: 40px; padding:0; color: white; flex: 1;" onclick="exportarCSV()">📊 EXPORTAR EXCEL</button>
+        </div>
     </div>
 
 <script>
@@ -150,10 +149,17 @@
     window.onload = () => {
         if (localStorage.getItem('temaEscuro') === 'true') document.body.classList.add('dark-mode');
         configurarMeses();
+        
         const ultimoMes = localStorage.getItem('ultimoMesSelecionado');
         if(ultimoMes) document.getElementById('filtroMes').value = ultimoMes;
+        
         const salvoLimite = localStorage.getItem('meuLimite');
         if(salvoLimite) document.getElementById('limite').value = salvoLimite;
+
+        // Carregar salários salvos
+        document.getElementById('salario10').value = localStorage.getItem('sal10') || "";
+        document.getElementById('salario20').value = localStorage.getItem('sal20') || "";
+        
         atualizar();
     };
 
@@ -179,7 +185,7 @@
         const valorRaw = valorInput.value.replace(/\s/g, '').replace(',', '.');
         const valor = parseFloat(valorRaw);
 
-        if(!desc || isNaN(valor)) return alert("Por favor, preencha a descrição e um valor válido.");
+        if(!desc || isNaN(valor)) return alert("Preencha descrição e valor.");
 
         const [ano, mes] = document.getElementById('filtroMes').value.split('-').map(Number);
         const parc = parseInt(document.getElementById('parc').value) || 1;
@@ -202,14 +208,11 @@
 
     function togglePago(id) {
         const g = gastos.find(g => g.id === id);
-        if(g) {
-            g.pago = !g.pago;
-            salvarEAtualizar();
-        }
+        if(g) { g.pago = !g.pago; salvarEAtualizar(); }
     }
 
     function remover(id) {
-        if(confirm("Deseja excluir este item?")) {
+        if(confirm("Excluir item?")) {
             gastos = gastos.filter(g => g.id !== id);
             salvarEAtualizar();
         }
@@ -218,21 +221,18 @@
     function salvarEAtualizar() {
         localStorage.setItem('meusGastos', JSON.stringify(gastos));
         localStorage.setItem('meuLimite', document.getElementById('limite').value);
+        localStorage.setItem('sal10', document.getElementById('salario10').value);
+        localStorage.setItem('sal20', document.getElementById('salario20').value);
         atualizar();
-    }
-
-    function salvarNotas() {
-        const mes = document.getElementById('filtroMes').value;
-        let notas = JSON.parse(localStorage.getItem('notasPorMes')) || {};
-        notas[mes] = document.getElementById('notas').value;
-        localStorage.setItem('notasPorMes', JSON.stringify(notas));
     }
 
     function atualizar() {
         const mesFiltro = document.getElementById('filtroMes').value;
         const limite = parseFloat(document.getElementById('limite').value) || 0;
-        localStorage.setItem('ultimoMesSelecionado', mesFiltro);
+        const sal10 = parseFloat(document.getElementById('salario10').value) || 0;
+        const sal20 = parseFloat(document.getElementById('salario20').value) || 0;
 
+        localStorage.setItem('ultimoMesSelecionado', mesFiltro);
         const notas = JSON.parse(localStorage.getItem('notasPorMes')) || {};
         document.getElementById('notas').value = notas[mesFiltro] || "";
 
@@ -247,60 +247,73 @@
             const tr = `<tr style="border-bottom: 1px solid var(--border)">
                 <td onclick="togglePago(${g.id})" style="padding:10px 0; cursor:pointer; width:60%">
                     <span style="font-size:0.6rem; color:var(--text-sub); display:block">${g.cat}</span>
-                    <b class="${g.pago ? 'pago' : ''}" style="word-break: break-word; white-space: normal;">${g.d}</b>
+                    <b class="${g.pago ? 'pago' : ''}">${g.d}</b>
                 </td>
-                <td style="text-align:right; font-weight:bold; width:30%; padding-right:5px" class="${g.pago ? 'pago' : ''}">R$ ${g.mensal.toFixed(2)}</td>
+                <td style="text-align:right; font-weight:bold; width:30%;" class="${g.pago ? 'pago' : ''}">R$ ${g.mensal.toFixed(2)}</td>
                 <td style="text-align:right; width:10%"><button class="btn-del" onclick="remover(${g.id})">✕</button></td>
             </tr>`;
             if(g.vc === "10") { t10 += g.mensal; l10.innerHTML += tr; }
             else { t20 += g.mensal; l20.innerHTML += tr; }
         });
 
+        // Cálculo dos Saldos
+        const saldo10 = sal10 - t10;
+        const saldo20 = sal20 - t20;
+        const display10 = document.getElementById('total10');
+        const display20 = document.getElementById('total20');
+
+        display10.innerText = `R$ ${saldo10.toFixed(2)}`;
+        display20.innerText = `R$ ${saldo20.toFixed(2)}`;
+        display10.style.color = saldo10 < 0 ? "#ff4d4d" : "white";
+        display20.style.color = saldo20 < 0 ? "#ff4d4d" : "white";
+
+        // Resumo Categorias
         const totalMes = t10 + t20;
         Object.entries(cats).sort((a,b) => b[1] - a[1]).forEach(([c, v]) => {
             const perc = totalMes > 0 ? (v / totalMes * 100).toFixed(0) : 0;
             res.innerHTML += `
                 <div class="cat-row">
-                    <div class="cat-info">
-                        <span>${c}</span>
-                        <span>R$ ${v.toFixed(2)} <small>(${perc}%)</small></span>
-                    </div>
-                    <div class="cat-bar-bg">
-                        <div class="cat-bar-fill" style="width: ${perc}%"></div>
-                    </div>
+                    <div class="cat-info"><span>${c}</span><span>R$ ${v.toFixed(2)} (${perc}%)</span></div>
+                    <div class="cat-bar-bg"><div class="cat-bar-fill" style="width: ${perc}%"></div></div>
                 </div>`;
         });
 
-        document.getElementById('total10').innerText = `R$ ${t10.toFixed(2)}`;
-        document.getElementById('total20').innerText = `R$ ${t20.toFixed(2)}`;
-
+        // Barra de Progresso Geral
         const p = limite > 0 ? Math.min((totalMes / limite * 100), 100) : 0;
         const bar = document.getElementById('progress-fill');
         bar.style.width = p + "%";
         bar.style.background = p > 90 ? "#dc3545" : (p > 70 ? "#ffc107" : "#28a745");
     }
 
+    function salvarNotas() {
+        const mes = document.getElementById('filtroMes').value;
+        let notas = JSON.parse(localStorage.getItem('notasPorMes')) || {};
+        notas[mes] = document.getElementById('notas').value;
+        localStorage.setItem('notasPorMes', JSON.stringify(notas));
+    }
+
     function exportarDados() {
-        const mesFiltro = document.getElementById('filtroMes').value;
-        const data = {
-            gastos, 
-            notas: JSON.parse(localStorage.getItem('notasPorMes')), 
-            limite: document.getElementById('limite').value
-        };
+        const data = { gastos, notas: JSON.parse(localStorage.getItem('notasPorMes')), limite: document.getElementById('limite').value };
         const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
-        const a = document.createElement('a'); 
+        const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `backup_financeiro_${mesFiltro}.json`; 
+        a.download = `backup_financeiro.json`;
         a.click();
     }
 
-    // Registro do Service Worker (Corrigido para fora da função)
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('Service Worker registrado com sucesso!'))
-                .catch(err => console.log('Falha ao registrar Service Worker:', err));
+    function exportarCSV() {
+        const mesFiltro = document.getElementById('filtroMes').value;
+        const filtrados = gastos.filter(g => g.mesReferencia === mesFiltro);
+        if (filtrados.length === 0) return alert("Sem dados.");
+        let csv = "Descricao;Valor;Categoria;Vencimento;Status\n";
+        filtrados.forEach(g => {
+            csv += `${g.d};${g.mensal.toFixed(2).replace('.', ',')};${g.cat};Dia ${g.vc};${g.pago ? 'Pago' : 'Pendente'}\n`;
         });
+        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `gastos_${mesFiltro}.csv`;
+        link.click();
     }
 </script>
 </body>
