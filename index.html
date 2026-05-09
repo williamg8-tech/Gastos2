@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
     <title>Controle Financeiro Pro</title>
     
     <style>
@@ -147,16 +151,17 @@
     let gastos = JSON.parse(localStorage.getItem('meusGastos')) || [];
 
     window.onload = () => {
+        // Aplica o tema escuro se estiver salvo
         if (localStorage.getItem('temaEscuro') === 'true') document.body.classList.add('dark-mode');
+        
         configurarMeses();
         
+        // Recupera o último mês visualizado
         const ultimoMes = localStorage.getItem('ultimoMesSelecionado');
         if(ultimoMes) document.getElementById('filtroMes').value = ultimoMes;
         
-        const salvoLimite = localStorage.getItem('meuLimite');
-        if(salvoLimite) document.getElementById('limite').value = salvoLimite;
-
-        // Carregar salários salvos
+        // Recupera valores de limite e salários
+        document.getElementById('limite').value = localStorage.getItem('meuLimite') || "2000";
         document.getElementById('salario10').value = localStorage.getItem('sal10') || "";
         document.getElementById('salario20').value = localStorage.getItem('sal20') || "";
         
@@ -180,7 +185,10 @@
     }
 
     function add() {
-        const descInput = document.getElementById('desc'), valorInput = document.getElementById('valor');
+        const descInput = document.getElementById('desc'), 
+              valorInput = document.getElementById('valor'),
+              parcInput = document.getElementById('parc');
+        
         const desc = descInput.value.trim();
         const valorRaw = valorInput.value.replace(/\s/g, '').replace(',', '.');
         const valor = parseFloat(valorRaw);
@@ -188,12 +196,13 @@
         if(!desc || isNaN(valor)) return alert("Preencha descrição e valor.");
 
         const [ano, mes] = document.getElementById('filtroMes').value.split('-').map(Number);
-        const parc = parseInt(document.getElementById('parc').value) || 1;
+        const parc = parseInt(parcInput.value) || 1;
 
+        // Loop para adicionar parcelas com IDs únicos
         for(let i = 0; i < parc; i++) {
             let dRef = new Date(ano, (mes - 1) + i, 1);
             gastos.push({
-                id: Date.now() + Math.random(),
+                id: Date.now() + Math.random() + i, // ID garantido como único
                 d: parc > 1 ? `${desc} (${i+1}/${parc})` : desc,
                 mensal: valor,
                 cat: document.getElementById('categoria').value,
@@ -202,7 +211,11 @@
                 pago: false
             });
         }
-        descInput.value = ""; valorInput.value = "";
+
+        // Limpa os campos após adicionar para facilitar o próximo uso
+        descInput.value = ""; 
+        valorInput.value = "";
+        parcInput.value = "1"; 
         salvarEAtualizar();
     }
 
@@ -212,7 +225,7 @@
     }
 
     function remover(id) {
-        if(confirm("Excluir item?")) {
+        if(confirm("Excluir este item?")) {
             gastos = gastos.filter(g => g.id !== id);
             salvarEAtualizar();
         }
@@ -237,7 +250,10 @@
         document.getElementById('notas').value = notas[mesFiltro] || "";
 
         let t10 = 0, t20 = 0, cats = {};
-        const l10 = document.getElementById('lista10'), l20 = document.getElementById('lista20'), res = document.getElementById('resumo-categorias');
+        const l10 = document.getElementById('lista10'), 
+              l20 = document.getElementById('lista20'), 
+              res = document.getElementById('resumo-categorias');
+        
         l10.innerHTML = ""; l20.innerHTML = ""; res.innerHTML = "";
 
         const filtrados = gastos.filter(g => g.mesReferencia === mesFiltro);
@@ -256,18 +272,20 @@
             else { t20 += g.mensal; l20.innerHTML += tr; }
         });
 
-        // Cálculo dos Saldos
+        // Atualiza Saldos (Salário - Gastos)
         const saldo10 = sal10 - t10;
         const saldo20 = sal20 - t20;
-        const display10 = document.getElementById('total10');
-        const display20 = document.getElementById('total20');
+        
+        const d10 = document.getElementById('total10');
+        const d20 = document.getElementById('total20');
+        
+        d10.innerText = `R$ ${saldo10.toFixed(2)}`;
+        d20.innerText = `R$ ${saldo20.toFixed(2)}`;
+        
+        d10.style.color = saldo10 < 0 ? "#ff4d4d" : "white";
+        d20.style.color = saldo20 < 0 ? "#ff4d4d" : "white";
 
-        display10.innerText = `R$ ${saldo10.toFixed(2)}`;
-        display20.innerText = `R$ ${saldo20.toFixed(2)}`;
-        display10.style.color = saldo10 < 0 ? "#ff4d4d" : "white";
-        display20.style.color = saldo20 < 0 ? "#ff4d4d" : "white";
-
-        // Resumo Categorias
+        // Resumo por Categorias
         const totalMes = t10 + t20;
         Object.entries(cats).sort((a,b) => b[1] - a[1]).forEach(([c, v]) => {
             const perc = totalMes > 0 ? (v / totalMes * 100).toFixed(0) : 0;
@@ -278,7 +296,7 @@
                 </div>`;
         });
 
-        // Barra de Progresso Geral
+        // Barra de Progresso do Limite
         const p = limite > 0 ? Math.min((totalMes / limite * 100), 100) : 0;
         const bar = document.getElementById('progress-fill');
         bar.style.width = p + "%";
@@ -304,7 +322,7 @@
     function exportarCSV() {
         const mesFiltro = document.getElementById('filtroMes').value;
         const filtrados = gastos.filter(g => g.mesReferencia === mesFiltro);
-        if (filtrados.length === 0) return alert("Sem dados.");
+        if (filtrados.length === 0) return alert("Sem dados para exportar.");
         let csv = "Descricao;Valor;Categoria;Vencimento;Status\n";
         filtrados.forEach(g => {
             csv += `${g.d};${g.mensal.toFixed(2).replace('.', ',')};${g.cat};Dia ${g.vc};${g.pago ? 'Pago' : 'Pendente'}\n`;
@@ -315,6 +333,15 @@
         link.download = `gastos_${mesFiltro}.csv`;
         link.click();
     }
+
+    // Registro otimizado do Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log("SW registrado!"))
+                .catch(err => console.log("Erro SW:", err));
+        });
+    }
 </script>
 </body>
-</html>
+    </html>
