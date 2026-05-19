@@ -6,7 +6,7 @@
 	<link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link class="apple-touch-icon" href="icon-192.png">
     <title>Controle Financeiro Pro</title>
     
     <style>
@@ -24,10 +24,17 @@
 
         .month-selector {
             background: var(--bg-card); padding: 12px; border-radius: 12px; margin-bottom: 15px;
-            display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08);
             position: sticky; top: 10px; z-index: 1001;
         }
         .month-selector select { flex: 1; border: 1px solid var(--border); font-weight: bold; padding: 8px; border-radius: 8px; background: var(--input-bg); color: var(--text-main); outline: none; }
+
+        /* Botão menor e discreto para os cabeçalhos das listas */
+        .btn-toggle-list {
+            background: var(--input-bg); border: 1px solid var(--border); color: var(--text-main);
+            padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer;
+            transition: 0.2s; width: auto;
+        }
 
         .header-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .box { padding: 12px 5px; border-radius: 12px; color: white; text-align: center; }
@@ -36,7 +43,13 @@
         .box strong { font-size: 0.9rem; }
 
         .card { background: var(--bg-card); border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        h2 { font-size: 0.75rem; color: var(--text-sub); text-align: center; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 15px 0; }
+        h2 { font-size: 0.75rem; color: var(--text-sub); text-align: center; text-transform: uppercase; letter-spacing: 1.5px; margin: 0; }
+
+        /* Estilo para alinhar título e botão no mesmo nível */
+        .list-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 12px;
+        }
 
         .category-column-wrapper { display: flex; flex-direction: column; gap: 12px; }
         .cat-row { display: flex; flex-direction: column; gap: 4px; }
@@ -107,13 +120,19 @@
         <div id="resumo-categorias" class="category-column-wrapper"></div>
     </div>
 
-    <div class="table-wrapper">
-        <h2 style="color: #0056b3; border-bottom: 1px solid #0056b322; padding-bottom: 8px;">Vencimento Dia 10</h2>
+    <div class="table-wrapper" id="wrapper10">
+        <div class="list-header" style="border-bottom-color: #0056b322;">
+            <h2 style="color: #0056b3; text-align: left; margin: 0;">Vencimento Dia 10</h2>
+            <button id="btnOcultar10" class="btn-toggle-list" onclick="alternarLista(10)">👁️ Ocultar</button>
+        </div>
         <table id="lista10"></table>
     </div>
 
-    <div class="table-wrapper">
-        <h2 style="color: #6f42c1; border-bottom: 1px solid #6f42c122; padding-bottom: 8px;">Vencimento Dia 20</h2>
+    <div class="table-wrapper" id="wrapper20">
+        <div class="list-header" style="border-bottom-color: #6f42c122;">
+            <h2 style="color: #6f42c1; text-align: left; margin: 0;">Vencimento Dia 20</h2>
+            <button id="btnOcultar20" class="btn-toggle-list" onclick="alternarLista(20)">👁️ Ocultar</button>
+        </div>
         <table id="lista20"></table>
     </div>
 
@@ -149,22 +168,23 @@
 
 <script>
     let gastos = JSON.parse(localStorage.getItem('meusGastos')) || [];
+    
+    let ocultarDia10 = localStorage.getItem('ocultarDia10') === 'true';
+    let ocultarDia20 = localStorage.getItem('ocultarDia20') === 'true';
 
     window.onload = () => {
-        // Aplica o tema escuro se estiver salvo
         if (localStorage.getItem('temaEscuro') === 'true') document.body.classList.add('dark-mode');
         
         configurarMeses();
         
-        // Recupera o último mês visualizado
         const ultimoMes = localStorage.getItem('ultimoMesSelecionado');
         if(ultimoMes) document.getElementById('filtroMes').value = ultimoMes;
         
-        // Recupera valores de limite e salários
         document.getElementById('limite').value = localStorage.getItem('meuLimite') || "2000";
         document.getElementById('salario10').value = localStorage.getItem('sal10') || "";
         document.getElementById('salario20').value = localStorage.getItem('sal20') || "";
-        
+
+        atualizarInterfaceBotoes();
         atualizar();
     };
 
@@ -184,6 +204,40 @@
         }
     }
 
+    function alternarLista(dia) {
+        if (dia === 10) {
+            ocultarDia10 = !ocultarDia10;
+            localStorage.setItem('ocultarDia10', ocultarDia10);
+        } else if (dia === 20) {
+            ocultarDia20 = !ocultarDia20;
+            localStorage.setItem('ocultarDia20', ocultarDia20);
+        }
+        atualizarInterfaceBotoes();
+        atualizar();
+    }
+
+    function atualizarInterfaceBotoes() {
+        // Botão na lista do Dia 10
+        const btn10 = document.getElementById('btnOcultar10');
+        if (ocultarDia10) {
+            btn10.innerHTML = "❌ Mostrar";
+            btn10.style.borderColor = "#ff4d4d";
+        } else {
+            btn10.innerHTML = "👁️ Ocultar";
+            btn10.style.borderColor = "var(--border)";
+        }
+
+        // Botão na lista do Dia 20
+        const btn20 = document.getElementById('btnOcultar20');
+        if (ocultarDia20) {
+            btn20.innerHTML = "❌ Mostrar";
+            btn20.style.borderColor = "#ff4d4d";
+        } else {
+            btn20.innerHTML = "👁️ Ocultar";
+            btn20.style.borderColor = "var(--border)";
+        }
+    }
+
     function add() {
         const descInput = document.getElementById('desc'), 
               valorInput = document.getElementById('valor'),
@@ -198,11 +252,10 @@
         const [ano, mes] = document.getElementById('filtroMes').value.split('-').map(Number);
         const parc = parseInt(parcInput.value) || 1;
 
-        // Loop para adicionar parcelas com IDs únicos
         for(let i = 0; i < parc; i++) {
             let dRef = new Date(ano, (mes - 1) + i, 1);
             gastos.push({
-                id: Date.now() + Math.random() + i, // ID garantido como único
+                id: Date.now() + Math.random() + i,
                 d: parc > 1 ? `${desc} (${i+1}/${parc})` : desc,
                 mensal: valor,
                 cat: document.getElementById('categoria').value,
@@ -212,7 +265,6 @@
             });
         }
 
-        // Limpa os campos após adicionar para facilitar o próximo uso
         descInput.value = ""; 
         valorInput.value = "";
         parcInput.value = "1"; 
@@ -252,14 +304,21 @@
         let t10 = 0, t20 = 0, cats = {};
         const l10 = document.getElementById('lista10'), 
               l20 = document.getElementById('lista20'), 
-              res = document.getElementById('resumo-categorias');
+              res = document.getElementById('resumo-categorias'),
+              w10 = document.getElementById('wrapper10'),
+              w20 = document.getElementById('wrapper20');
         
         l10.innerHTML = ""; l20.innerHTML = ""; res.innerHTML = "";
+
+        // Oculta apenas os dados da tabela
+        l10.style.display = ocultarDia10 ? "none" : "table";
+        l20.style.display = ocultarDia20 ? "none" : "table";
 
         const filtrados = gastos.filter(g => g.mesReferencia === mesFiltro);
 
         filtrados.forEach(g => {
             cats[g.cat] = (cats[g.cat] || 0) + g.mensal;
+            
             const tr = `<tr style="border-bottom: 1px solid var(--border)">
                 <td onclick="togglePago(${g.id})" style="padding:10px 0; cursor:pointer; width:60%">
                     <span style="font-size:0.6rem; color:var(--text-sub); display:block">${g.cat}</span>
@@ -268,11 +327,11 @@
                 <td style="text-align:right; font-weight:bold; width:30%;" class="${g.pago ? 'pago' : ''}">R$ ${g.mensal.toFixed(2)}</td>
                 <td style="text-align:right; width:10%"><button class="btn-del" onclick="remover(${g.id})">✕</button></td>
             </tr>`;
+            
             if(g.vc === "10") { t10 += g.mensal; l10.innerHTML += tr; }
             else { t20 += g.mensal; l20.innerHTML += tr; }
         });
 
-        // Atualiza Saldos (Salário - Gastos)
         const saldo10 = sal10 - t10;
         const saldo20 = sal20 - t20;
         
@@ -285,7 +344,6 @@
         d10.style.color = saldo10 < 0 ? "#ff4d4d" : "white";
         d20.style.color = saldo20 < 0 ? "#ff4d4d" : "white";
 
-        // Resumo por Categorias
         const totalMes = t10 + t20;
         Object.entries(cats).sort((a,b) => b[1] - a[1]).forEach(([c, v]) => {
             const perc = totalMes > 0 ? (v / totalMes * 100).toFixed(0) : 0;
@@ -296,7 +354,6 @@
                 </div>`;
         });
 
-        // Barra de Progresso do Limite
         const p = limite > 0 ? Math.min((totalMes / limite * 100), 100) : 0;
         const bar = document.getElementById('progress-fill');
         bar.style.width = p + "%";
@@ -334,7 +391,6 @@
         link.click();
     }
 
-    // Registro otimizado do Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js')
@@ -344,4 +400,5 @@
     }
 </script>
 </body>
-    </html>
+</html>
+   
